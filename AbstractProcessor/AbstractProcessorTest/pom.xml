@@ -31,8 +31,8 @@
 					<source>1.8</source>
 					<target>1.8</target>
 					<encoding>UTF-8</encoding>
-					<!-- <generatedSourcesDirectory>${project.build.directory}/generated-sources/
-					</generatedSourcesDirectory> -->
+					<generatedSourcesDirectory>${project.build.directory}/generated-sources/
+					</generatedSourcesDirectory>
 				</configuration>
 			</plugin>
 
@@ -48,7 +48,8 @@
 						</goals>
 						<configuration>
 							<sources>
-								<source>src/main/generated-src</source>
+								<source>src/main/generated-sources/
+								</source>
 							</sources>
 						</configuration>
 					</execution>
