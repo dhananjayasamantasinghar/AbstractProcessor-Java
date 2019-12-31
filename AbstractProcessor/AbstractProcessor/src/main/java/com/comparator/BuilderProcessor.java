@@ -8,7 +8,6 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import javax.annotation.processing.AbstractProcessor;
-import javax.annotation.processing.Processor;
 import javax.annotation.processing.RoundEnvironment;
 import javax.annotation.processing.SupportedAnnotationTypes;
 import javax.annotation.processing.SupportedSourceVersion;
@@ -19,52 +18,72 @@ import javax.lang.model.type.ExecutableType;
 import javax.tools.Diagnostic;
 import javax.tools.JavaFileObject;
 
-import com.google.auto.service.AutoService;
-
 @SupportedAnnotationTypes("com.comparator.BuilderProperty")
 @SupportedSourceVersion(SourceVersion.RELEASE_8)
-@AutoService(Processor.class)
 public class BuilderProcessor extends AbstractProcessor {
 
     @Override
     public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
-        
-          for (TypeElement annotation : annotations) {
-          
-          Set<? extends Element> annotatedElements =
-          roundEnv.getElementsAnnotatedWith(annotation);
-          
-          Map<Boolean, List<Element>> annotatedMethods = annotatedElements.stream()
-          .collect(Collectors.partitioningBy( element -> ((ExecutableType)
-          element.asType()).getParameterTypes().size() == 1 &&
-          element.getSimpleName().toString().startsWith("set")));
-          
-          List<Element> setters = annotatedMethods.get(true); List<Element>
-          otherMethods = annotatedMethods.get(false);
-          
-          otherMethods.forEach(element ->
-          processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR,
-          "@BuilderProperty must be applied to a setXxx method with a single argument",
-          element));
-          
-          if (setters.isEmpty()) { continue; }
-          
-          String className = ((TypeElement)
-          setters.get(0).getEnclosingElement()).getQualifiedName().toString();
-          
-          Map<String, String> setterMap = setters.stream()
-          .collect(Collectors.toMap(setter -> setter.getSimpleName().toString(), setter
-          -> ((ExecutableType)
-          setter.asType()).getParameterTypes().get(0).toString()));
-          
-          try { writeBuilderFile(className, setterMap); } catch (IOException e) {
-          e.printStackTrace(); }
-          
-          }
-         
-        
-        System.out.println("========================================Processor call hele =====================================");
+
+        for (TypeElement annotation : annotations) {
+
+            Set<? extends Element> annotatedElements = roundEnv.getElementsAnnotatedWith(annotation);
+
+            System.out.println("All Methods : "+annotatedElements);
+            
+            Map<Boolean, List<Element>> annotatedMethods = annotatedElements.stream()
+                    .collect(Collectors.partitioningBy(
+                            element -> ((ExecutableType) 
+                                    element.asType()).getParameterTypes().size() == 1
+                                    && element.getSimpleName().toString().startsWith("set")));
+
+            //Annotated Methods : {false=[], true=[setAge(int), setName(java.lang.String)]}
+           System.out.println("Annotated Methods : "+annotatedMethods);
+           
+           
+            List<Element> setters = annotatedMethods.get(true);
+            //[setAge(int), setName(java.lang.String)]
+            System.out.println("===========SETTERS : "+setters);
+            
+            
+            validateOtherMethods(annotatedMethods);
+
+            if (setters.isEmpty()) {
+                continue;
+            }
+            
+            //CLSSS NAME :: com.comparator.User
+            System.out.println("CLSSS NAME :: "+((TypeElement) setters.get(0).getEnclosingElement()));
+
+            String className = ((TypeElement) setters.get(0).getEnclosingElement()).getQualifiedName().toString();
+
+            Map<String, String> setterMap = setters.stream()
+                    .collect(Collectors.toMap(setter -> setter.getSimpleName().toString(),
+                            setter -> ((ExecutableType) setter.asType())
+                            .getParameterTypes().get(0).toString()));
+            
+            System.out.println("===========SETTER MAP :"+setterMap);
+            //SETTER MAP :{setName=java.lang.String, setAge=int}
+
+            try {
+                writeBuilderFile(className, setterMap);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+        }
+
+        System.out.println(
+                "========================================Processor called =====================================");
         return true;
+    }
+
+    private void validateOtherMethods(Map<Boolean, List<Element>> annotatedMethods) {
+        List<Element> otherMethods = annotatedMethods.get(false);
+        otherMethods.forEach(element -> processingEnv
+                .getMessager()
+                .printMessage(Diagnostic.Kind.ERROR
+                        ,"@BuilderProperty must be applied to a setXxx method with a single argument", element));
     }
 
     private void writeBuilderFile(String className, Map<String, String> setterMap) throws IOException {
